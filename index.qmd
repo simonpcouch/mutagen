@@ -1,0 +1,131 @@
+---
+title: "Pharmaceutical machine learning with tidymodels and Posit Connect"
+format: html
+editor: visual
+description: "A group of scientists are investigating whether they can use drug information to predict if a proposed drug could be a carcinogen. Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients."
+---
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(tidyverse)
+library(tidymodels)
+library(bundle)
+library(vetiver)
+library(pins)
+
+load("data/mutagen_tbl.Rda")
+load("data/metrics_wf_set.Rda")
+load("data/metrics_xgb.Rda")
+load("data/xgb_final_fit.Rda")
+load("data/final_fit.Rda")
+```
+
+In pharmaceutical research, mutagenicity refers to a drug's tendency to increase the rate of mutations due to the damage of genetic material, a key indicator that a drug may be a carcinogen. Mutagenicity can be evaluated using a lab test, though the test requires experienced scientists and time in the lab. A group of scientists are studying whether, instead, they can use known information to quickly predict the mutagenicity of new drugs.
+
+The open-source tidymodels packages for machine learning empower these scientists to quickly propose, train, and evaluate a diversity of statistical approaches to predict mutagenicity. Based on their findings, the most performant machine learning model can then be integrated into a Shiny app using Posit Connect, allowing scientists across the organization to quickly input drug information and evaluate the potential for drugs to harm patients.
+
+## Training Data
+
+The training data consists of `r nrow(mutagen_tbl)` rows and `r ncol(mutagen_tbl)` columns, where the first column gives the outcome of the lab test for a given proposed drug, and the remaining columns give known information about the chemical structure of the drug. This information about the chemical structure can be obtained much more quickly and cheaply than the outcome---in the future, scientists want to be able to predict whether a drug is a mutagen based only on the drug information.
+
+```{r}
+#| echo: false
+mutagen_tbl
+```
+
+No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the first two predictors against the outcome to demonstrate:
+
+```{r}
+#| echo: false
+ggplot(mutagen_tbl) +
+  aes(x = MW, y = AMW, color = outcome) +
+  geom_point() +
+  theme_minimal() +
+  scale_color_manual(values = c("#ba0600", "#71b075"))
+```
+
+However, using machine learning, we may be able find patterns hidden among all of this data to predict whether a drug is a mutagen or not.
+
+## Developing The Model
+
+The tidymodels packages provide a consistent interface to hundreds of machine learning models available across the R ecosystem. This consistency allows us to quickly try out a diversity of statistical approaches, relying on tidymodels to protect us from common modeling pitfalls and provide rigorous estimates of model performance.
+
+First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs:
+
+```{r}
+#| echo: false
+metrics_wf_set %>%
+  mutate(
+    model = case_when(
+      model == "boost_tree" ~ "XGBoost Boosted Tree",
+      model == "logistic_reg" ~ "Logistic Regression",
+      model == "bag_tree" ~ "Bagged Decision Tree",
+      model == "bag_mars" ~ "Bagged MARS",
+      model == "svm_rbf" ~ "Support Vector Machine",
+      model == "mlp" ~ "Neural Networks"
+    )
+  ) %>%
+  filter(.metric == "accuracy") %>%
+  arrange(desc(.estimate)) %>%
+  mutate(model = fct_inorder(model)) %>%
+  select(Model = model, Accuracy = .estimate) %>%
+  ggplot() +
+  aes(x = Model, y = Accuracy) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate. We will thus use these initial results to optimize our XGBoost model further with an approach called *simulated annealing*:
+
+```{r}
+#| echo: false
+metrics_xgb %>%
+  filter(.metric == "accuracy") %>%
+  mutate(Accuracy = .estimate, Iteration = as.factor(.iter)) %>%
+  ggplot() +
+  aes(x = Iteration, y = Accuracy) +
+  geom_boxplot() +
+  theme_minimal()
+```
+
+```{r}
+#| include: false
+metrics_sum <- metrics_xgb %>%
+  filter(.metric == "accuracy") %>%
+  group_by(.iter) %>%
+  summarize(mean = mean(.estimate))
+
+max_mean_pos <- which.max(metrics_sum$mean)
+best_iter <- metrics_sum$.iter[max_mean_pos]
+best_acc <- metrics_sum$mean[max_mean_pos]
+
+test_acc <- 
+  collect_metrics(xgb_final_fit) %>%
+  filter(.metric == "accuracy") %>%
+  pull(.estimate)
+```
+
+Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher accuracies. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimizations in iteration `r best_iter`, giving a validation set accuracy of `r round(best_acc, 3) * 100`%. Fitting the best model to the full training set, we see a final test set accuracy of `r round(test_acc, 3) * 100`%, indicating that our model generalizes well to data it hasn't yet seen.
+
+## Model Deployment
+
+With our final model fitted and benchmarked, it's time to put this model into practice. Using vetiver, we can quickly develop a Shiny app to provide a user-friendly interface to the fitted model. We then host the app on RStudio Connect, providing a safe and performant server to provide model predictions to practitioners within our organization.
+
+``` r
+# TODO: screencap demo here
+#| eval: false
+#| echo: false
+final_fit_unbundled <- unbundle(final_fit)
+
+final_fit_vetiver <- vetiver_model(final_fit_unbundled, "mutagen")
+
+board <- board_connect()
+
+vetiver_pin_write(board, final_fit_vetiver)
+
+vetiver_deploy_rsconnect(board, "mutagen")
+```
+
