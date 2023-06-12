@@ -131,6 +131,6 @@ vetiver_pin_write(board, final_fit_vetiver)
 vetiver_deploy_rsconnect(board, "simon.couch/mutagen")
 ```
 
-![A GIF screenshot of of a Posit Connect instance hosting the vetiver model's plumber API, titled "Mutagen Model API." The cursor first navigates over four user-facing tabs, providing templates for pinging, pinning, and predicting using the hosted model. A sidebar for Posit Connect gives additional controls for metadata, security, and scheduling.](figures/connect_mutagen.gif)
+![](figures/connect_mutagen.gif){fig-alt="A GIF screenshot of a Posit Connect instance hosting the vetiver model's plumber API, titled Mutagen Model API. The cursor first navigates over four user-facing tabs, providing templates for pinging, pinning, and predicting using the hosted model. A sidebar for Posit Connect gives additional controls for metadata, security, and scheduling."}
 
 The vetiver plumber API provides documentation and templates for generating predictions from the deployed model. Hosting the API on Posit Connect allows us to easily edit the model's metadata and documentation, securely manage permissions among our organization, and monitor the model's usage.
