@@ -98,7 +98,7 @@ ul.task-list li input[type="checkbox"] {
 <p>No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the first two predictors against the outcome to demonstrate:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="index_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
+<p><img src="index_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" alt="A ggplot2 dot-plot, with predictors MW and AMW on the x and y axes. Points are colored depending on the outcome, with red denoting mutagens and green denoting nonmutagens. The red and green clouds of points are largely intermixed, showing that these two predictors do not separate these classes well on their own." width="672"></p>
 </div>
 </div>
 <p>However, using machine learning, we may be able find patterns hidden among all of this data to predict whether a drug is a mutagen or not.</p>
@@ -109,13 +109,13 @@ ul.task-list li input[type="checkbox"] {
 <p>First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" alt="A ggplot2 faceted boxplot, where different model types are on the x-axis and the validation set accuracies associated with those models are on the y-axis. The shown accuracies range from 0 to around 0.85. The x-axis is roughly sorted by descending accuracy, where the left-most model, XGBoost Boosted Tree, tends to have the highest accuracy. Other models proposed were, from left to right, Bagged Decision Tree, Support Vector Machine, Logistic Regression, Bagged MARS, and Neural Network." width="672"></p>
 </div>
 </div>
 <p>Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set accuracies above 80%. We will thus use these initial results to optimize our XGBoost model further with an approach called <em>simulated annealing</em>:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" alt="A ggplot2 faceted boxplot, where the x-axis gives iterations ranging from 0 to 25, and the y-axis gives the distribution of validation set accuracies for that iteration. With some exceptions in iterations 13 through 17, the interquartile range in most iterations is 0.8 to 0.83." width="672"></p>
 </div>
 </div>
 <p>Simulated annealing performs an <em>iterative search</em>, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher accuracies. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimization in iteration 18, giving a validation set accuracy of 83.4%. Fitting the best model to the full training set, we see a final test set accuracy of 84.2%, indicating that our model generalizes well to data it hasn’t yet seen.</p>
