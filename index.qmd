@@ -78,7 +78,7 @@ metrics_wf_set %>%
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 
-Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate. We will thus use these initial results to optimize our XGBoost model further with an approach called *simulated annealing*:
+Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set accuracies above 80%. We will thus use these initial results to optimize our XGBoost model further with an approach called *simulated annealing*:
 
 ```{r}
 #| echo: false
@@ -108,7 +108,7 @@ test_acc <-
   pull(.estimate)
 ```
 
-Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher accuracies. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimizations in iteration `r best_iter`, giving a validation set accuracy of `r round(best_acc, 3) * 100`%. Fitting the best model to the full training set, we see a final test set accuracy of `r round(test_acc, 3) * 100`%, indicating that our model generalizes well to data it hasn't yet seen.
+Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher accuracies. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimization in iteration `r best_iter`, giving a validation set accuracy of `r round(best_acc, 3) * 100`%. Fitting the best model to the full training set, we see a final test set accuracy of `r round(test_acc, 3) * 100`%, indicating that our model generalizes well to data it hasn't yet seen.
 
 ## Model Deployment
 
@@ -126,6 +126,6 @@ board <- board_connect()
 
 vetiver_pin_write(board, final_fit_vetiver)
 
-vetiver_deploy_rsconnect(board, "mutagen")
+vetiver_deploy_rsconnect(board, "simon.couch/mutagen")
 ```
 
