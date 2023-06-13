@@ -35,7 +35,7 @@ The training data consists of `r nrow(mutagen_tbl)` rows and `r ncol(mutagen_tbl
 mutagen_tbl
 ```
 
-No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the two commonly used predictors against the outcome to demonstrate:
+No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot two commonly used predictors against the outcome to demonstrate:
 
 ```{r}
 #| fig-alt: "A ggplot2 dot-plot, with predictors MW and AMW on the x and y axes. Points are colored depending on the outcome, with red denoting mutagens and green denoting nonmutagens. The red and green clouds of points are largely intermixed, showing that these two predictors do not separate these classes well on their own."
@@ -57,7 +57,7 @@ The tidymodels packages provide a consistent interface to hundreds of machine le
 First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs and judge their effectiveness using a metric called the [area under the ROC curve](https://bookdown.org/max/FES/measuring-performance.html#class-metrics "ROC curves"):
 
 ```{r}
-#| fig-alt: "A ggplot2 faceted boxplot, where different model types are on the x-axis and the validation set accuracies associated with those models are on the y-axis. The shown accuracies range from 0 to around 0.85. The x-axis is roughly sorted by descending accuracy, where the left-most model, XGBoost Boosted Tree, tends to have the highest accuracy. Other models proposed were, from left to right, Bagged Decision Tree, Support Vector Machine, Logistic Regression, Bagged MARS, and Neural Network."
+#| fig-alt: "A ggplot2 faceted boxplot, where different model types are on the x-axis and the validation set ROC AUCs associated with those models are on the y-axis. The shown metrics values range from 0 to around 0.9. The x-axis is roughly sorted by descending ROC AUC, where the left-most model, XGBoost Boosted Tree, tends to have the best performance. Other models proposed were, from left to right, Bagged Decision Tree, Support Vector Machine, Logistic Regression, Bagged MARS, and Neural Network."
 #| echo: false
 metrics_wf_set %>%
   mutate(
@@ -81,10 +81,10 @@ metrics_wf_set %>%
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 
-Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set ROC scores above 0.75 (a value of 1.0 is best). We will thus use these initial results to optimize our XGBoost model further with an approach called *simulated annealing*:
+Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set ROC scores above 0.85 (a value of 1.0 is best). We will thus use these initial results to optimize our XGBoost model further with an approach called *simulated annealing*:
 
 ```{r}
-#| fig-alt: "A ggplot2 faceted boxplot, where the x-axis gives iterations ranging from 0 to 25, and the y-axis gives the distribution of validation set accuracies for that iteration. With some exceptions in iterations 13 through 17, the interquartile range in most iterations is 0.8 to 0.83."
+#| fig-alt: "A ggplot2 faceted boxplot, where the x-axis gives iterations ranging from 0 to 25, and the y-axis gives the distribution of validation set ROC AUCs for that iteration. With some exceptions in iterations 14 through 17, the interquartile range in most iterations is 0.86 to 0.92."
 #| echo: false
 metrics_xgb %>%
   filter(.metric == "roc_auc") %>%
@@ -112,7 +112,7 @@ test_roc <-
   pull(.estimate)
 ```
 
-Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimization in iteration `r best_iter`, giving a validation set ROC score of `r round(best_roc, 3)`. Fitting the best model to the full training set, we see a final test set ROC score of `r round(test_roc, 3)`, indicating that our model generalizes well to data it hasn't yet seen.
+Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search evaluated then proposed optimizations that resulted in less performant models before discovering more performant optimizations later on, giving a maximum validation set ROC score of `r round(best_roc, 3)`. Fitting the best model to the full training set, we see a final test set ROC score of `r round(test_roc, 3)`, indicating that our model generalizes well to data it hasn't yet seen.
 
 ## Model Deployment
 
@@ -136,4 +136,5 @@ vetiver_deploy_rsconnect(board, "simon.couch/mutagen")
 ![](figures/connect_mutagen.gif){fig-alt="A GIF screenshot of a Posit Connect instance hosting the vetiver model's plumber API, titled Mutagen Model API. The cursor first navigates over four user-facing tabs, providing templates for pinging, pinning, and predicting using the hosted model. A sidebar for Posit Connect gives additional controls for metadata, security, and scheduling."}
 
 The vetiver plumber API provides documentation and templates for generating predictions from the deployed model. Hosting the API on Posit Connect allows us to easily edit the model's metadata and documentation, securely manage permissions among our organization, and monitor the model's usage.
+
 
