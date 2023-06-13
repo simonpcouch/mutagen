@@ -129,7 +129,7 @@ wf_set_fit <-
     control = control_grid(parallel_over = "everything")
   )
 
-save(wf_set_fit, file = "data/wf_set_fit.Rda")
+save(wf_set_fit, file = "data-raw/wf_set_fit.Rda")
 
 wf_set_fit <-
   wf_set_fit[
@@ -167,7 +167,7 @@ xgb_sim_anneal_fit <-
     control = control_sim_anneal(verbose = TRUE, parallel_over = "everything")
   )
 
-save(xgb_sim_anneal_fit, file = "data/xgb_sim_anneal_fit.Rda")
+save(xgb_sim_anneal_fit, file = "data-raw/xgb_sim_anneal_fit.Rda")
 
 metrics_xgb <- collect_metrics(xgb_sim_anneal_fit, summarize = FALSE)
 

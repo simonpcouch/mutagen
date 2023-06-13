@@ -3,6 +3,5 @@
 .Rdata
 .httr-oauth
 .DS_Store
-data-raw/
-data/xgb_sim_anneal_fit.Rda
-data/wf_set_fit.Rda
+data-raw/*
+!data-raw/README.md
