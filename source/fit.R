@@ -6,7 +6,7 @@ library(baguette)
 library(bundle)
 library(doMC)
 library(finetune)
-registerDoMC(cores = min(max(1, parallelly::availableCores() - 1), 4))
+registerDoMC(cores = max(1, parallelly::availableCores() - 1))
 
 data(Mutagen)
 
@@ -71,7 +71,7 @@ spec_bt <-
 
 spec_nn <- 
   mlp(hidden_units = tune(), penalty = tune(), epochs = tune()) %>%
-  set_engine("nnet") %>%
+  set_engine("nnet", MaxNWts = 15000) %>%
   set_mode("classification")
 
 spec_svm <- 
@@ -85,7 +85,7 @@ spec_xgb <-
   set_mode("classification")
 
 # metrics ------
-mutagen_metrics <- metric_set(accuracy, roc_auc, kap, mcc)
+mutagen_metrics <- metric_set(roc_auc, accuracy, kap, mcc)
 
 # combine into a workflow set -------
 wf_set <-
@@ -125,7 +125,8 @@ wf_set_fit <-
     verbose = TRUE, 
     seed = 1,
     resamples = mutagen_folds,
-    metrics = mutagen_metrics
+    metrics = mutagen_metrics,
+    control = control_grid(parallel_over = "everything")
   )
 
 save(wf_set_fit, file = "data-raw/wf_set_fit.Rda")
@@ -141,8 +142,8 @@ wf_set_fit <-
 metrics_wf_set <- collect_metrics(wf_set_fit, summarize = FALSE)
 
 metrics_wf_set %>%
-  filter(.metric == "accuracy") %>%
-  arrange(desc(mean))
+  filter(.metric == "roc_auc") %>%
+  arrange(desc(.estimate))
 
 save(metrics_wf_set, file = "data/metrics_wf_set.Rda")
 
@@ -163,7 +164,7 @@ xgb_sim_anneal_fit <-
     iter = 25,
     metrics = mutagen_metrics,
     initial = xgb_res,
-    control = control_sim_anneal(verbose = TRUE)
+    control = control_sim_anneal(verbose = TRUE, parallel_over = "everything")
   )
 
 save(xgb_sim_anneal_fit, file = "data-raw/xgb_sim_anneal_fit.Rda")
@@ -175,7 +176,7 @@ save(metrics_xgb, file = "data/metrics_xgb.Rda")
 # final model fit and evaluation against test set ----------
 xgb_final_fit <-
   last_fit(
-    finalize_workflow(xgb_wflow, select_best(xgb_sim_anneal_fit, "accuracy")),
+    finalize_workflow(xgb_wflow, select_best(xgb_sim_anneal_fit, metric = "roc_auc")),
     mutagen_split
   )
 

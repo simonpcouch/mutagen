@@ -3,4 +3,5 @@
 .Rdata
 .httr-oauth
 .DS_Store
-data-raw/
+data-raw/*
+!data-raw/README.md

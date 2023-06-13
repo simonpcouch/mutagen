@@ -2,11 +2,11 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.340">
+<meta name="generator" content="quarto-1.3.313">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="description" content="A group of scientists are investigating whether they can use drug information to predict if a proposed drug could be a carcinogen. Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients.">
+<meta name="description" content="A group of scientists investigate whether they can use drug information to predict if a proposed drug could be a mutagen (i.e.&nbsp;toxicity caused by damage to DNA). Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients.">
 
 <title>Pharmaceutical machine learning with tidymodels and Posit Connect</title>
 <style>
@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -51,7 +85,7 @@ ul.task-list li input[type="checkbox"] {
 
 <div>
   <div class="description">
-    A group of scientists are investigating whether they can use drug information to predict if a proposed drug could be a carcinogen. Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients.
+    A group of scientists investigate whether they can use drug information to predict if a proposed drug could be a mutagen (i.e.&nbsp;toxicity caused by damage to DNA). Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients.
   </div>
 </div>
 
@@ -95,10 +129,10 @@ ul.task-list li input[type="checkbox"] {
 #   nR09 &lt;int&gt;, nR10 &lt;int&gt;, nR11 &lt;int&gt;, nR12 &lt;int&gt;, nBnz &lt;int&gt;, ZM1 &lt;int&gt;, …</code></pre>
 </div>
 </div>
-<p>No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the first two predictors against the outcome to demonstrate:</p>
+<p>No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the two commonly used predictors against the outcome to demonstrate:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="index_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" alt="A ggplot2 dot-plot, with predictors MW and AMW on the x and y axes. Points are colored depending on the outcome, with red denoting mutagens and green denoting nonmutagens. The red and green clouds of points are largely intermixed, showing that these two predictors do not separate these classes well on their own." width="672"></p>
+<p><img src="index_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>However, using machine learning, we may be able find patterns hidden among all of this data to predict whether a drug is a mutagen or not.</p>
@@ -106,25 +140,35 @@ ul.task-list li input[type="checkbox"] {
 <section id="developing-the-model" class="level2">
 <h2 class="anchored" data-anchor-id="developing-the-model">Developing The Model</h2>
 <p>The tidymodels packages provide a consistent interface to hundreds of machine learning models available across the R ecosystem. This consistency allows us to quickly try out a diversity of statistical approaches, relying on tidymodels to protect us from common modeling pitfalls and provide rigorous estimates of model performance.</p>
-<p>First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs:</p>
+<p>First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs and judge their effectiveness using a metric called the <a href="https://bookdown.org/max/FES/measuring-performance.html#class-metrics" title="ROC curves">area under the ROC curve</a>:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" alt="A ggplot2 faceted boxplot, where different model types are on the x-axis and the validation set accuracies associated with those models are on the y-axis. The shown accuracies range from 0 to around 0.85. The x-axis is roughly sorted by descending accuracy, where the left-most model, XGBoost Boosted Tree, tends to have the highest accuracy. Other models proposed were, from left to right, Bagged Decision Tree, Support Vector Machine, Logistic Regression, Bagged MARS, and Neural Network." width="672"></p>
+<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set accuracies above 80%. We will thus use these initial results to optimize our XGBoost model further with an approach called <em>simulated annealing</em>:</p>
+<p>Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set ROC scores above 0.75 (a value of 1.0 is best). We will thus use these initial results to optimize our XGBoost model further with an approach called <em>simulated annealing</em>:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" alt="A ggplot2 faceted boxplot, where the x-axis gives iterations ranging from 0 to 25, and the y-axis gives the distribution of validation set accuracies for that iteration. With some exceptions in iterations 13 through 17, the interquartile range in most iterations is 0.8 to 0.83." width="672"></p>
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Simulated annealing performs an <em>iterative search</em>, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher accuracies. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimization in iteration 18, giving a validation set accuracy of 83.4%. Fitting the best model to the full training set, we see a final test set accuracy of 84.2%, indicating that our model generalizes well to data it hasn’t yet seen.</p>
+<p>Simulated annealing performs an <em>iterative search</em>, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimization in iteration 1, giving a validation set ROC score of 0.903. Fitting the best model to the full training set, we see a final test set ROC score of 0.912, indicating that our model generalizes well to data it hasn’t yet seen.</p>
 </section>
 <section id="model-deployment" class="level2">
 <h2 class="anchored" data-anchor-id="model-deployment">Model Deployment</h2>
-<p>With our final model fitted and benchmarked, it’s time to put this model into practice. Using vetiver, we can quickly develop a Plumber API to provide a user-friendly interface to the fitted model. We then host the app on Posit Connect, providing a safe and performant server to provide model predictions to practitioners within our organization.</p>
-<p><img src="figures/connect_mutagen.gif" class="img-fluid" alt="A GIF screenshot of a Posit Connect instance hosting the vetiver model's plumber API, titled Mutagen Model API. The cursor first navigates over four user-facing tabs, providing templates for pinging, pinning, and predicting using the hosted model. A sidebar for Posit Connect gives additional controls for metadata, security, and scheduling."></p>
-<p>The vetiver plumber API provides documentation and templates for generating predictions from the deployed model. Hosting the API on Posit Connect allows us to easily edit the model’s metadata and documentation, securely manage permissions among our organization, and monitor the model’s usage.</p>
+<p>With our final model fitted and benchmarked, it’s time to put this model into practice. Using vetiver, we can quickly develop a Shiny app to provide a user-friendly interface to the fitted model. We then host the app on RStudio Connect, providing a safe and performant server to provide model predictions to practitioners within our organization.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: screencap demo here</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>final_fit_unbundled <span class="ot">&lt;-</span> <span class="fu">unbundle</span>(final_fit)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>final_fit_vetiver <span class="ot">&lt;-</span> <span class="fu">vetiver_model</span>(final_fit_unbundled, <span class="st">"mutagen"</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>board <span class="ot">&lt;-</span> <span class="fu">board_connect</span>()</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">vetiver_pin_write</span>(board, final_fit_vetiver)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">vetiver_deploy_rsconnect</span>(board, <span class="st">"simon.couch/mutagen"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 
 </main>
