@@ -119,7 +119,7 @@ ul.task-list li input[type="checkbox"] {
 <p><img src="index_files/figure-html/plot-sim-anneal-1.png" class="img-fluid" alt="A ggplot2 faceted boxplot, where the x-axis gives iterations ranging from 0 to 25, and the y-axis gives the distribution of out-of-sample ROC AUCs for that iteration. With some exceptions in iterations 14 through 17, the interquartile range in most iterations is 0.86 to 0.92." width="672"></p>
 </div>
 </div>
-<p>Simulated annealing performs an <em>iterative search</em>, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search evaluated then proposed optimizations that resulted in less performant models before discovering more performant optimizations later on, giving a maximum out-of-sample ROC score of 0.903. Fitting the best model to the full training set, we see a final test set ROC score of 0.912, indicating that our model generalizes well to data it hasn’t yet seen.</p>
+<p>Simulated annealing performs an <em>iterative search</em>, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search then proposed optimizations that resulted in less performant models before discovering more performant optimizations later on, giving a maximum out-of-sample ROC score of 0.903. Fitting the best model to the full training set, we see a final test set ROC score of 0.912, indicating that our model generalizes well to data it hasn’t yet seen.</p>
 </section>
 <section id="model-deployment" class="level2">
 <h2 class="anchored" data-anchor-id="model-deployment">Model Deployment</h2>

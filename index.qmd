@@ -114,7 +114,7 @@ test_roc <-
   pull(.estimate)
 ```
 
-Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search evaluated then proposed optimizations that resulted in less performant models before discovering more performant optimizations later on, giving a maximum out-of-sample ROC score of `r round(best_roc, 3)`. Fitting the best model to the full training set, we see a final test set ROC score of `r round(test_roc, 3)`, indicating that our model generalizes well to data it hasn't yet seen.
+Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search then proposed optimizations that resulted in less performant models before discovering more performant optimizations later on, giving a maximum out-of-sample ROC score of `r round(best_roc, 3)`. Fitting the best model to the full training set, we see a final test set ROC score of `r round(test_roc, 3)`, indicating that our model generalizes well to data it hasn't yet seen.
 
 ## Model Deployment
 
