@@ -2,7 +2,7 @@
 title: "Pharmaceutical machine learning with tidymodels and Posit Connect"
 format: html
 editor: visual
-description: "A group of scientists are investigating whether they can use drug information to predict if a proposed drug could be a carcinogen. Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients."
+description: "A group of scientists investigate whether they can use drug information to predict if a proposed drug could be a mutagen (i.e. toxicity caused by damage to DNA). Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients."
 ---
 
 ```{r}
@@ -35,13 +35,14 @@ The training data consists of `r nrow(mutagen_tbl)` rows and `r ncol(mutagen_tbl
 mutagen_tbl
 ```
 
-No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the first two predictors against the outcome to demonstrate:
+No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the two commonly used predictors against the outcome to demonstrate:
 
 ```{r}
 #| echo: false
 ggplot(mutagen_tbl) +
-  aes(x = MW, y = AMW, color = outcome) +
+  aes(x = MW, y = MLOGP, color = outcome) +
   geom_point() +
+  labs(x = "Mol. Weight", y = "Partition Coefficient") +
   theme_minimal() +
   scale_color_manual(values = c("#ba0600", "#71b075"))
 ```
@@ -52,7 +53,7 @@ However, using machine learning, we may be able find patterns hidden among all o
 
 The tidymodels packages provide a consistent interface to hundreds of machine learning models available across the R ecosystem. This consistency allows us to quickly try out a diversity of statistical approaches, relying on tidymodels to protect us from common modeling pitfalls and provide rigorous estimates of model performance.
 
-First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs:
+First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs and judge their effectiveness using a metric called the [area under the ROC curve](https://bookdown.org/max/FES/measuring-performance.html#class-metrics "ROC curves"):
 
 ```{r}
 #| echo: false
@@ -67,26 +68,26 @@ metrics_wf_set %>%
       model == "mlp" ~ "Neural Networks"
     )
   ) %>%
-  filter(.metric == "accuracy") %>%
+  filter(.metric == "roc_auc") %>%
   arrange(desc(.estimate)) %>%
   mutate(model = fct_inorder(model)) %>%
-  select(Model = model, Accuracy = .estimate) %>%
+  select(Model = model, `ROC AUC` = .estimate) %>%
   ggplot() +
-  aes(x = Model, y = Accuracy) +
+  aes(x = Model, y = `ROC AUC`) +
   geom_boxplot() +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 
-Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set accuracies above 80%. We will thus use these initial results to optimize our XGBoost model further with an approach called *simulated annealing*:
+Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set ROC scores above 0.75 (a value of 1.0 is best). We will thus use these initial results to optimize our XGBoost model further with an approach called *simulated annealing*:
 
 ```{r}
 #| echo: false
 metrics_xgb %>%
-  filter(.metric == "accuracy") %>%
-  mutate(Accuracy = .estimate, Iteration = as.factor(.iter)) %>%
+  filter(.metric == "roc_auc") %>%
+  mutate(`ROC AUC` = .estimate, Iteration = as.factor(.iter)) %>%
   ggplot() +
-  aes(x = Iteration, y = Accuracy) +
+  aes(x = Iteration, y = `ROC AUC`) +
   geom_boxplot() +
   theme_minimal()
 ```
@@ -94,21 +95,21 @@ metrics_xgb %>%
 ```{r}
 #| include: false
 metrics_sum <- metrics_xgb %>%
-  filter(.metric == "accuracy") %>%
+  filter(.metric == "roc_auc") %>%
   group_by(.iter) %>%
   summarize(mean = mean(.estimate))
 
 max_mean_pos <- which.max(metrics_sum$mean)
 best_iter <- metrics_sum$.iter[max_mean_pos]
-best_acc <- metrics_sum$mean[max_mean_pos]
+best_roc <- metrics_sum$mean[max_mean_pos]
 
-test_acc <- 
+test_roc <- 
   collect_metrics(xgb_final_fit) %>%
-  filter(.metric == "accuracy") %>%
+  filter(.metric == "roc_auc") %>%
   pull(.estimate)
 ```
 
-Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher accuracies. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimization in iteration `r best_iter`, giving a validation set accuracy of `r round(best_acc, 3) * 100`%. Fitting the best model to the full training set, we see a final test set accuracy of `r round(test_acc, 3) * 100`%, indicating that our model generalizes well to data it hasn't yet seen.
+Simulated annealing performs an *iterative search*, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimization in iteration `r best_iter`, giving a validation set ROC score of `r round(best_roc, 3)`. Fitting the best model to the full training set, we see a final test set ROC score of `r round(test_roc, 3)`, indicating that our model generalizes well to data it hasn't yet seen.
 
 ## Model Deployment
 
@@ -128,4 +129,3 @@ vetiver_pin_write(board, final_fit_vetiver)
 
 vetiver_deploy_rsconnect(board, "simon.couch/mutagen")
 ```
-

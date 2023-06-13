@@ -2,11 +2,11 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.340">
+<meta name="generator" content="quarto-1.3.313">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="description" content="A group of scientists are investigating whether they can use drug information to predict if a proposed drug could be a carcinogen. Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients.">
+<meta name="description" content="A group of scientists investigate whether they can use drug information to predict if a proposed drug could be a mutagen (i.e.&nbsp;toxicity caused by damage to DNA). Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients.">
 
 <title>Pharmaceutical machine learning with tidymodels and Posit Connect</title>
 <style>
@@ -85,7 +85,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <div>
   <div class="description">
-    A group of scientists are investigating whether they can use drug information to predict if a proposed drug could be a carcinogen. Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients.
+    A group of scientists investigate whether they can use drug information to predict if a proposed drug could be a mutagen (i.e.&nbsp;toxicity caused by damage to DNA). Deploying a tidymodels machine learning model with Posit Connect, these scientists can rapidly assess new drugs for their potential harm to patients.
   </div>
 </div>
 
@@ -129,7 +129,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 #   nR09 &lt;int&gt;, nR10 &lt;int&gt;, nR11 &lt;int&gt;, nR12 &lt;int&gt;, nBnz &lt;int&gt;, ZM1 &lt;int&gt;, …</code></pre>
 </div>
 </div>
-<p>No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the first two predictors against the outcome to demonstrate:</p>
+<p>No particular predictor will allow us to straightforwardly predict whether a drug may be a mutagen. We can plot the two commonly used predictors against the outcome to demonstrate:</p>
 <div class="cell">
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
@@ -140,19 +140,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="developing-the-model" class="level2">
 <h2 class="anchored" data-anchor-id="developing-the-model">Developing The Model</h2>
 <p>The tidymodels packages provide a consistent interface to hundreds of machine learning models available across the R ecosystem. This consistency allows us to quickly try out a diversity of statistical approaches, relying on tidymodels to protect us from common modeling pitfalls and provide rigorous estimates of model performance.</p>
-<p>First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs:</p>
+<p>First, we try out a number of different machine learning techniques to model the mutagenicity of these drugs and judge their effectiveness using a metric called the <a href="https://bookdown.org/max/FES/measuring-performance.html#class-metrics" title="ROC curves">area under the ROC curve</a>:</p>
 <div class="cell">
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate. We will thus use these initial results to optimize our XGBoost model further with an approach called <em>simulated annealing</em>:</p>
+<p>Based on the above plot, we see that a boosted tree model fitted with XGBoost consistently outperforms other models we evaluate, with validation set ROC scores above 0.75 (a value of 1.0 is best). We will thus use these initial results to optimize our XGBoost model further with an approach called <em>simulated annealing</em>:</p>
 <div class="cell">
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Simulated annealing performs an <em>iterative search</em>, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher accuracies. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimizations in iteration 18, giving a validation set accuracy of 83.4%. Fitting the best model to the full training set, we see a final test set accuracy of 84.2%, indicating that our model generalizes well to data it hasn’t yet seen.</p>
+<p>Simulated annealing performs an <em>iterative search</em>, using results from previous iterations to inform later optimizations. In this search, we see that optimizations made in early iterations resulted in higher ROC scores. The search evaluated then proposed optimizations that resulted in less performant models before discovering the most performant optimization in iteration 1, giving a validation set ROC score of 0.903. Fitting the best model to the full training set, we see a final test set ROC score of 0.912, indicating that our model generalizes well to data it hasn’t yet seen.</p>
 </section>
 <section id="model-deployment" class="level2">
 <h2 class="anchored" data-anchor-id="model-deployment">Model Deployment</h2>
@@ -168,7 +168,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">vetiver_pin_write</span>(board, final_fit_vetiver)</span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">vetiver_deploy_rsconnect</span>(board, <span class="st">"mutagen"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">vetiver_deploy_rsconnect</span>(board, <span class="st">"simon.couch/mutagen"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 
 </main>
