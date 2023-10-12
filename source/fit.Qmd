@@ -14,6 +14,7 @@ if (file.exists("data/mutagen_tbl.Rda")) {
   load("data/metrics_xgb.Rda")
   load("data/xgb_final_fit.Rda")
   load("data/final_fit.Rda")
+  final_fit <- bundle::unbundle(final_fit)
 } else {
   eval_fits <- TRUE
 }
@@ -28,6 +29,9 @@ library(tidymodels)
 library(baguette)
 library(bundle)
 library(finetune)
+
+library(vetiver)
+library(pins)
 ```
 
 tidymodels supports a number of R frameworks for parallel computing:
@@ -242,9 +246,11 @@ The `last_fit()` function will take care of fitting the most performant model sp
 #| eval: !expr eval_fits
 xgb_final_fit <-
   last_fit(
-    finalize_workflow(xgb_wflow, select_best(xgb_sim_anneal_fit, metric = "roc_auc")),
+    xgb_wflow,
     mutagen_split
   )
+
+final_fit <- extract_workflow(xgb_final_fit)
 ```
 
 ## Deploying to Connect
@@ -253,8 +259,6 @@ From here, all we need to do to deploy our fitted model is pass it off to vetive
 
 ```{r}
 #| eval: false
-final_fit <- extract_workflow(xgb_final_fit)
-
 final_fit_vetiver <- vetiver_model(final_fit, "mutagen")
 
 board <- board_connect()
