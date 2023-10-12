@@ -1,0 +1,265 @@
+---
+title: "End-to-End Machine Learning with tidymodels and Posit Team"
+format: html
+editor: visual
+---
+
+```{r}
+#| echo: false
+if (file.exists("data/mutagen_tbl.Rda")) {
+  eval_fits <- FALSE
+  # read outputs in from source:
+  load("data/mutagen_tbl.Rda")
+  load("data/metrics_wf_set.Rda")
+  load("data/metrics_xgb.Rda")
+  load("data/xgb_final_fit.Rda")
+  load("data/final_fit.Rda")
+} else {
+  eval_fits <- TRUE
+}
+```
+
+## Setup
+
+First, loading tidymodels, along with a few additional tidymodels extension packages:
+
+```{r}
+library(tidymodels)
+library(baguette)
+library(bundle)
+library(finetune)
+```
+
+tidymodels supports a number of R frameworks for parallel computing:
+
+```{r}
+#| message: false
+library(doMC)
+library(parallelly)
+
+availableCores()
+
+registerDoMC(cores = max(1, availableCores() - 1))
+```
+
+Now, cleaning data:
+
+```{r}
+library(QSARdata)
+
+data(Mutagen)
+
+mutagen_tbl <- 
+  bind_cols(
+    as_tibble_col(Mutagen_Outcome, "outcome"),
+    as_tibble(Mutagen_Dragon)
+  )
+
+mutagen_tbl
+```
+
+## Splitting up data
+
+We split data into training and testing sets so that, once we've trained our final model, we can get an honest assessment of the model's performance:
+
+```{r}
+set.seed(1)
+mutagen_split <- initial_split(mutagen_tbl)
+mutagen_train <- training(mutagen_split)
+mutagen_test <- testing(mutagen_split)
+
+set.seed(1)
+mutagen_folds <- vfold_cv(mutagen_train)
+```
+
+## Defining our modeling strategies
+
+Our basic strategy is to first try out a bunch of different modeling approaches, and once we have an initial sense for how they perform, delve further into the one that looks the most promising.
+
+We first define a few *recipes*, which specify how to process the inputted data in such a way that machine learning models will know how to work with predictors:
+
+```{r}
+recipe_basic <-
+  recipe(outcome ~ ., mutagen_train) %>%
+  step_nzv(all_predictors())
+
+recipe_normalize <-
+  recipe_basic %>%
+  step_YeoJohnson(all_double_predictors()) %>%
+  step_normalize(all_double_predictors())
+
+recipe_pca <- 
+  recipe_normalize %>%
+  step_pca(all_numeric_predictors(), num_comp = tune())
+```
+
+These recipes vary in complexity, from basic checks on the input data to advanced feature engineering techniques like principal component analysis.
+
+We also define several *model specifications*. tidymodels comes with support for all sorts of machine learning algorithms, from neural networks to XGBoost boosted trees to plain old logistic regression:
+
+```{r}
+spec_lr <-
+  logistic_reg() %>%
+  set_mode("classification")
+
+spec_bm <- 
+  bag_mars(num_terms = tune(), prod_degree = tune()) %>%
+  set_engine("earth") %>% 
+  set_mode("classification")
+
+spec_bt <- 
+  bag_tree(cost_complexity = tune(), tree_depth = tune(), min_n = tune()) %>%
+  set_engine("rpart") %>%
+  set_mode("classification")
+
+spec_nn <- 
+  mlp(hidden_units = tune(), penalty = tune(), epochs = tune()) %>%
+  set_engine("nnet", MaxNWts = 15000) %>%
+  set_mode("classification")
+
+spec_svm <- 
+  svm_rbf(cost = tune(), rbf_sigma = tune(), margin = tune()) %>%
+  set_mode("classification")
+
+spec_xgb <-
+  boost_tree(trees = tune(), min_n = tune(), tree_depth = tune(),
+             learn_rate = tune(), stop_iter = 10) %>%
+  set_engine("xgboost") %>%
+  set_mode("classification")
+```
+
+Note how similar the code for each of these model specifications looks! tidymodels takes care of the "translation" from our unified syntax to the code that these algorithms expect.
+
+If typing all of these out seems cumbersome to you, or you're not sure how to define a model specification that makes sense for your data, the usemodels RStudio addin may help!
+
+## Evaluating models: round 1
+
+We'll pair machine learning models with the recipes that make the most sense for them:
+
+```{r}
+wf_set <-
+  workflow_set(
+    preproc = list(basic = recipe_basic),
+    models = list(boost_tree = spec_xgb, logistic_reg = spec_lr)
+  ) %>%
+  bind_rows(
+    workflow_set(
+      preproc = list(normalize = recipe_normalize),
+      models = list(
+        bag_tree = spec_bt,
+        bag_mars = spec_bm,
+        svm_rbf = spec_svm,
+        mlp = spec_nn
+      )
+    )
+  ) %>%
+  bind_rows(
+    workflow_set(
+      preproc = list(pca = recipe_pca),
+      models = list(
+        bag_tree = spec_bt,
+        bag_mars = spec_bm,
+        svm_rbf = spec_svm,
+        mlp = spec_nn
+      )
+    )
+  )
+
+wf_set
+```
+
+```{r}
+#| eval: !expr eval_fits
+wf_set_fit <-
+  workflow_map(
+    wf_set, 
+    fn = "tune_grid", 
+    verbose = TRUE, 
+    seed = 1,
+    resamples = mutagen_folds,
+    control = control_grid(parallel_over = "everything")
+  )
+```
+
+```{r}
+#| eval: !expr eval_fits
+wf_set_fit <-
+  wf_set_fit[
+    map_lgl(wf_set_fit$result, 
+            ~pluck(., ".metrics", 1) %>% inherits("tbl_df"), 
+            "tune_results"),
+  ]
+
+# first look at metrics:
+metrics_wf_set <- collect_metrics(wf_set_fit, summarize = FALSE)
+```
+
+Taking a look at how these models did:
+
+```{r}
+metrics_wf_set %>%
+  filter(.metric == "roc_auc") %>%
+  arrange(desc(.estimate))
+```
+
+## Evaluating models: round 2
+
+It looks like XGBoost with minimal preprocessing was considerably more performant than the other proposed models. Let's work with those XGBoost results and see if we can make any improvements to performance:
+
+```{r}
+#| eval: !expr eval_fits
+xgb_res <- extract_workflow_set_result(wf_set_fit, "basic_boost_tree")
+
+xgb_wflow <-
+  workflow() %>%
+  add_recipe(recipe_basic) %>%
+  add_model(spec_xgb)
+
+xgb_sim_anneal_fit <-
+  tune_sim_anneal(
+    object = xgb_wflow,
+    resamples = mutagen_folds,
+    iter = 25,
+    metrics = mutagen_metrics,
+    initial = xgb_res,
+    control = control_sim_anneal(verbose = TRUE, parallel_over = "everything")
+  )
+
+metrics_xgb <- collect_metrics(xgb_sim_anneal_fit, summarize = FALSE)
+```
+
+Looks like we *did* make a small improvement:
+
+```{r}
+metrics_xgb
+```
+
+## The final model fit
+
+The `last_fit()` function will take care of fitting the most performant model specification to the whole training dataset:
+
+```{r}
+#| eval: !expr eval_fits
+xgb_final_fit <-
+  last_fit(
+    finalize_workflow(xgb_wflow, select_best(xgb_sim_anneal_fit, metric = "roc_auc")),
+    mutagen_split
+  )
+```
+
+## Deploying to Connect
+
+From here, all we need to do to deploy our fitted model is pass it off to vetiver for deployment to Posit Connect:
+
+```{r}
+#| eval: false
+final_fit <- extract_workflow(xgb_final_fit)
+
+final_fit_vetiver <- vetiver_model(final_fit, "mutagen")
+
+board <- board_connect()
+
+vetiver_pin_write(board, final_fit_vetiver)
+
+vetiver_deploy_rsconnect(board, "simon.couch/mutagen")
+```
