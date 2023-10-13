@@ -1,0 +1,471 @@
+---
+title: ""
+format: 
+  revealjs:
+    theme: [default, tidymodels.scss]
+    footer: '<span style="color:#CA225E;">github.com/simonpcouch/mutagen</span>'
+editor: source
+knitr:
+  opts_chunk: 
+    echo: true
+    collapse: true
+    comment: "#>"
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+#| warning: false
+library(tidyverse)
+
+library(tidymodels)
+library(textrecipes)
+library(themis)
+x <- lapply(parsnip:::extensions(), require, character.only = TRUE)
+
+library(bundle)
+library(vetiver)
+library(pins)
+
+library(glmnet)
+library(h2o)
+
+options(width = 70)
+
+theme_set(theme_minimal(base_size = 20))
+
+load("data/mutagen_tbl.Rda")
+load("data/metrics_wf_set.Rda")
+load("data/metrics_xgb.Rda")
+load("data/xgb_final_fit.Rda")
+load("data/final_fit.Rda")
+```
+
+# End-to-End Machine Learning with {background-color="#CA225E"}
+
+![](figures/tidymodels_plus_posit_team.png)
+
+## 
+
+![](figures/ml_ops_cycle_tidymodels_plus_posit_team.png){fig-align="center"}
+
+## What is a machine learning model?
+
+::: incremental
+- Netflix movie recommendations
+- Zillow property value estimates
+- E-mail spam filters
+:::
+
+. . .
+
+_Guess the value of_ **outcomes** _using_ **predictors**
+
+
+## Machine learning with Posit Team
+
+::: incremental
+- **Understand and clean data** with tidyverse
+- **Train and evaluate models** with tidymodels and Workbench
+- **Share the final model** with vetiver and Connect
+:::
+
+# Understand and clean data {background-color="#CA225E"}
+
+## Understand and clean data
+
+
+::: incremental
+- **Mutagenicity** refers to a drug’s tendency to increase the rate of mutations
+- Mutagenicity can be evaluated with a lab test, though those tests are **costly and time-intensive**
+:::
+
+. . .
+
+_What if a machine learning model could predict mutagenicity using known drug information?_
+
+---
+
+```{r print-mutagen}
+mutagen_tbl
+```
+
+---
+
+Goal: separate the blue and yellow
+
+```{r plot-mutagen}
+#| fig-alt: "A ggplot2 dot-plot, with predictors molecular weights and partition coefficient on the x and y axes. Points are colored depending on the outcome, with red denoting mutagens and green denoting nonmutagens. The red and green clouds of points are largely intermixed, showing that these two predictors do not separate these classes well on their own."
+#| echo: false
+ggplot(mutagen_tbl) +
+  aes(x = MW, y = MLOGP, color = outcome) +
+  geom_point() +
+  labs(x = "Mol. Weight", y = "Partition Coefficient") +
+  scale_color_manual(values = c("#4A6BB9", "#C3AC28"))
+```
+
+---
+
+Goal: separate the blue and yellow
+
+```{r plot-mutagen-2}
+#| fig-alt: "A similar ggplot2 dot-plot, with predictors heavy atoms and average valence connectivity on the x and y axes."
+#| echo: false
+ggplot(mutagen_tbl) +
+  aes(x = nH, y = log(X2Av), color = outcome) +
+  geom_point() +
+  labs(x = "# of Heavy Atoms", y = "Log(Average Valence Connectivity)") +
+  scale_color_manual(values = c("#4A6BB9", "#C3AC28"))
+```
+
+
+---
+
+Goal: separate the blue and yellow`r emo::ji("face screaming in fear")``r emo::ji("face screaming in fear")``r emo::ji("face screaming in fear")`
+
+```{r plot-mutagen-2}
+#| fig-alt: "A similar ggplot2 dot-plot, with predictors heavy atoms and average valence connectivity on the x and y axes."
+#| echo: false
+```
+
+# Train and evaluate models {background-color="#CA225E"}
+
+## Why tidymodels? 
+
+## Why tidymodels?  *Consistency*
+
+. . .
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+With `lm()`:
+
+```{r eng-lm-model}
+#| echo: true
+#| eval: false
+model <- 
+  lm(mpg ~ ., mtcars)
+```
+
+:::
+
+::: {.column width="50%"}
+
+With tidymodels:
+
+```{r tm-lm}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "|3"
+model <-
+  linear_reg() %>%
+  set_engine("lm") %>%
+  fit(mpg ~ ., mtcars)
+```
+
+
+:::
+
+::::
+
+## Why tidymodels?  *Consistency*
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+With glmnet:
+
+```{r eng-glmnet-model}
+#| echo: true
+#| eval: false
+model <- 
+  glmnet(
+    as.matrix(mtcars[2:11]),
+    mtcars$mpg
+  )
+```
+
+:::
+
+::: {.column width="50%"}
+
+With tidymodels:
+
+```{r tm-glmnet}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "3||3"
+model <-
+  linear_reg() %>%
+  set_engine("glmnet") %>%
+  fit(mpg ~ ., mtcars)
+```
+
+
+:::
+
+::::
+
+## Why tidymodels?  *Consistency*
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+With h2o:
+
+```{r eng-h2o-model}
+#| echo: true
+#| eval: false
+h2o::h2o.init()
+as.h2o(mtcars, "mtcars")
+
+model <- 
+  h2o.glm(
+    x = colnames(mtcars[2:11]), 
+    y = "mpg",
+    "mtcars"
+  )
+```
+
+:::
+
+::: {.column width="50%"}
+
+With tidymodels:
+
+```{r tm-h2o}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "3|"
+model <-
+  linear_reg() %>%
+  set_engine("h2o") %>%
+  fit(mpg ~ ., mtcars)
+```
+
+
+:::
+
+::::
+
+## Why tidymodels?  *Consistency*
+
+## Why tidymodels?  *Safety*[^1]
+
+## Why tidymodels?  *Safety*[^1]
+
+* A 2023 review found **data leakage** to be "a widespread failure mode in machine-learning (ML)-based science."
+
+. . .
+
+* **Overfitting** leads to analysts believing models are more performant than they actually are.
+
+. . .
+
+* Implementations of the same machine learning model give differing results, resulting in **irreproducibility** of modeling results.
+
+[^1]: 10.1016/j.patter.2023.100804, 10.1097/01.psy.0000127692.23278.a9, 10.1609/aaai.v32i1.11694
+
+---
+
+### Why tidymodels? *Communicability*
+
+tidymodels objects can easily be _visualized_
+
+```{r autoplot-roc}
+#| eval: false
+#| echo: true
+autoplot(roc_curve)
+```
+
+![](https://www.tidymodels.org/start/recipes/figs/roc-plot-1.svg){fig-align="center"}
+
+
+---
+
+### Why tidymodels? *Communicability*
+
+tidymodels objects can easily be _visualized_
+
+```{r autoplot-rf}
+#| eval: false
+#| echo: true
+autoplot(random_forest_tuning_result)
+```
+
+![](https://www.tidymodels.org/start/case-study/figs/rf-results-1.svg){fig-align="center"}
+
+---
+
+### Why tidymodels? *Communicability*
+
+tidymodels objects can easily be _visualized_
+
+```{r autoplot-iter}
+#| eval: false
+#| echo: true
+autoplot(iterative_search_result)
+```
+
+![](https://www.tidymodels.org/learn/work/bayes-opt/figs/bo-plot-1.svg){fig-align="center"}
+
+---
+
+### Why tidymodels?  *Completeness*
+
+```{r make-model-options}
+#| message: false
+#| warning: false
+#| eval: true
+#| echo: false
+library(parsnip)
+library(tidyverse)
+
+x <- lapply(parsnip:::extensions(), require, character.only = TRUE)
+
+model_options <-
+  parsnip::get_model_env() %>%
+  as.list() %>%
+  enframe() %>%
+  filter(grepl("pkgs", name)) %>%
+  mutate(name = gsub("_pkgs", "", name)) %>%
+  unnest(value) %>%
+  distinct(name, engine)
+```
+
+Built-in support for `r nrow(model_options)` machine learning models!
+
+```{r print-model-options}
+#| echo: false
+#| collapse: false
+model_options
+```
+
+---
+
+### Why tidymodels?  *Completeness*
+
+```{r make-recipes-options}
+#| message: false
+#| warning: false
+#| eval: true
+#| echo: false
+library(tidyverse)
+
+recipes_pkgs <- c("recipes", "textrecipes", "themis")
+
+read_ns <- function(pkg) {
+  asNamespace("recipes") %>%
+    pluck(".__NAMESPACE__.", "exports") %>%
+    as.list() %>%
+    enframe()
+}
+
+step_options <-
+  map(recipes_pkgs, read_ns) %>%
+  bind_rows() %>%
+  filter(grepl("step", name)) %>%
+  distinct(name)
+```
+
+Built-in support for `r nrow(step_options)` data pre-processing techniques!
+
+```{r print-recipes-options}
+#| echo: false
+#| collapse: false
+step_options
+```
+
+## Why tidymodels?  *Extensibility*
+
+. . .
+
+Can't find the technique you need?
+
+. . . 
+
+![](https://media.tenor.com/Yw6STFBZk_8AAAAC/not-a-problem-thumbs-up.gif){fig-align="center" width="60%"}
+
+## Why tidymodels? *Deployability*
+
+. . .
+
+Tightly integrated with vetiver and Posit Team.
+
+. . .
+
+Let's go see how!`r emo::ji("smiling face with sunglasses")`
+
+
+---
+
+---
+
+## 
+
+![](figures/ml_ops_cycle_tidymodels_plus_posit_team.png){fig-align="center"}
+
+## Resources
+
+:::: {.columns}
+::: {.column width="50%"}
+
+* tidyverse: <span style="color:#CA225E;">r4ds.hadley.nz</span>
+
+:::
+::: {.column width="50%"}
+
+![](https://r4ds.hadley.nz/cover.jpg){height="550"}
+
+:::
+::::
+
+## Resources
+
+:::: {.columns}
+::: {.column width="50%"}
+
+* tidyverse: <span style="color:#CA225E;">r4ds.hadley.nz</span>
+* tidymodels: <span style="color:#CA225E;">tmwr.org</span>
+
+:::
+::: {.column width="50%"}
+
+![](https://www.tmwr.org/images/cover.png){height="550"}
+
+:::
+::::
+
+## Resources
+
+:::: {.columns}
+::: {.column width="50%"}
+
+* tidyverse: <span style="color:#CA225E;">r4ds.hadley.nz</span>
+* tidymodels: <span style="color:#CA225E;">tmwr.org</span>
+* Posit Team: <span style="color:#CA225E;">posit.co/team</span>
+
+:::
+::: {.column width="50%"}
+
+![](figures/logo_posit_team.png)
+
+:::
+::::
+
+## Resources
+
+* tidyverse: <span style="color:#CA225E;">r4ds.hadley.nz</span>
+* tidymodels: <span style="color:#CA225E;">tmwr.org</span>
+* Posit Team: <span style="color:#CA225E;">posit.co/team</span>
+* Slides and source code:
+
+<center><span style="color:#CA225E;">github.com/simonpcouch/mutagen</span></center>
+
+. . .
+
+Thank you!
