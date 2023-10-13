@@ -3,6 +3,7 @@ title: ""
 format: 
   revealjs:
     theme: [default, tidymodels.scss]
+    footer: '<span style="color:#CA225E;">github.com/simonpcouch/mutagen</span>'
 editor: source
 knitr:
   opts_chunk: 
@@ -403,6 +404,10 @@ Let's go see how!`r emo::ji("smiling face with sunglasses")`
 ---
 
 ---
+
+## 
+
+![](figures/ml_ops_cycle_tidymodels_plus_posit_team.png){fig-align="center"}
 
 ## Resources
 
