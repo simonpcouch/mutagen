@@ -13,5 +13,6 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: slides
-          branch: gh-pages-slides
+          branch: gh-pages
           clean: false
+          target-folder: slides
