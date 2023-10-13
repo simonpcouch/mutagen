@@ -1,4 +1,4 @@
-name: Deploy slides
+name: Deploy source
 on: [push]
 permissions:
   contents: write
@@ -10,7 +10,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Rename file 
-        run: mv source/fit.html source/index.html
+        run: |
+          mv source/fit.html source/index.html
+          mv source/fit_files source_index_files
         
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
