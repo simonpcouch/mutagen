@@ -21,7 +21,7 @@ jobs:
       - name: Rename source files 
         run: |
           mv source/fit.html source/index.html
-          cp source/fit_files source/index_files
+          cp -r source/fit_files source/index_files
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
