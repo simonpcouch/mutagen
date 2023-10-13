@@ -20,6 +20,7 @@ jobs:
       
       - name: Rename source files 
         run: |
+          mkdir -p -- "$notebook"
           mv source/fit.html notebook/index.html
           mv source/fit_files notebook/index_files
 
