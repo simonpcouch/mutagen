@@ -17,11 +17,6 @@ jobs:
           branch: gh-pages
           clean: false
           target-folder: slides
-      
-      - name: Rename source files 
-        run: |
-          mv source/fit.html source/index.html
-          cp -r source/fit_files source/index_files
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
@@ -29,5 +24,5 @@ jobs:
           folder: source
           branch: gh-pages
           clean: false
-          target-folder: notebook
+          target-folder: source
           
