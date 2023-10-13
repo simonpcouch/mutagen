@@ -14,6 +14,9 @@ jobs:
 
       - name: Rename folder 
         run: mv source/fit_files source_index_files
+        
+      - name: List contents
+        run: ls source
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
