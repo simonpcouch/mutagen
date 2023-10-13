@@ -21,7 +21,7 @@ jobs:
       - name: Rename source files 
         run: |
           mv source/fit.html source/index.html
-          mv source/fit_files source/index_files
+          cp source/fit_files source/index_files
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
@@ -30,3 +30,4 @@ jobs:
           branch: gh-pages
           clean: false
           target-folder: notebook
+          
